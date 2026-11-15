@@ -357,6 +357,18 @@
         'implied = round( tvl_usd x category_multiple x (1 + clamp(change_7d, ' + m.growth_floor + ', ' + m.growth_cap + ') / 100 x ' + m.growth_weight + ') x (' + m.maturity_floor + ' + min(age_days, ' + m.maturity_days + ') / ' + m.maturity_days + ' x ' + m.maturity_range + ') x (1 + 0.02 x min(chains - 1, 5)) )'
       ),
       el('p', { class: 'sub', text: 'TVL and seven-day growth come from the snapshot. Age is the time since the protocol was first listed, the best record of how long it has run with no token; an unlisted age uses ' + m.unknown_age_days + ' days. Breadth counts the chains a protocol runs on. The early radar is every pre-token protocol below the watchlist floor, by TVL, and the live-token protocols are set aside with their market caps shown.' }),
+      el('p', { class: 'sub', text: 'Each row also carries a risk score from 100: one chain only costs 15, a seven-day fall of a fifth or more costs 20, under 90 days of history costs 10, no listing date costs 5, and under $100M of TVL costs 10. The score never changes a rank; it only says how closely to look before farming.' }),
+      el('div', null,
+        el('h3', { text: 'Risk bands: what the score means' }),
+        el('table', { class: 'comps' },
+          el('thead', null, el('tr', null, el('th', { scope: 'col', text: 'Band' }), el('th', { scope: 'col', text: 'Score' }), el('th', { scope: 'col', text: 'Read it as' }))),
+          el('tbody', null,
+            el('tr', null, el('td', { text: 'Low' }), el('td', { class: 'num', text: '85 – 100' }), el('td', { text: 'No flag, or one small one: farm as planned.' })),
+            el('tr', null, el('td', { text: 'Medium' }), el('td', { class: 'num', text: '65 – 84' }), el('td', { text: 'Something to check: read the flags before depositing.' })),
+            el('tr', null, el('td', { text: 'High' }), el('td', { class: 'num', text: '0 – 64' }), el('td', { text: 'Several flags at once: look closer, or skip it.' }))
+          )
+        )
+      ),
       el('div', { class: 'sandbox' },
         el('h3', { text: 'Model sandbox: change the weights, watch the board re-rank' }),
         el('div', { class: 'sandbox-row' },
@@ -429,6 +441,17 @@
         el('p', { class: 'sub', text: comp.n + ' live-token ' + (row.category || 'Other') + ' protocols trade at a median of ' + fmtMult(comp.median_multiple) + ' of market cap per $1 of TVL. That median is this row’s multiple; a category with fewer live protocols falls back to the global median of ' + fmtMult(DATA.global_multiple) + '.' })
       ));
     }
+    dialog.appendChild(el('section', { class: 'detail-section' },
+      el('h3', { text: 'Risk' }),
+      el('div', { class: 'equation' },
+        el('div', null, el('span', { text: 'Risk score' }), el('b', { class: 'num', text: String(row.risk_score) + ' / 100 · ' + row.risk_label })),
+        el('div', null, el('span', { text: 'Flags' }), el('b', { class: 'num', text: String(row.risk_factors.length) }))
+      ),
+      el('ul', { class: 'risk' }, row.risk_factors.map(function (f) {
+        return el('li', null, el('b', { text: f.label + (f.points > 0 ? ' −' + f.points : '') }), el('span', { class: 'cost', text: f.detail }));
+      })),
+      el('p', { class: 'sub', text: 'A low score never removes a row from the board. It only says to look closer before farming: check the chain, the seven-day trend and the listing history first.' })
+    ));
     dialog.appendChild(el('section', { class: 'detail-section' },
       el('h3', { text: 'Farm plan' }),
       el('ol', { class: 'steps' }, steps.map(function (s) {

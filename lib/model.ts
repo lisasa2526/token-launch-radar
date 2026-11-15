@@ -90,6 +90,19 @@ export interface FarmStep {
   time: string;
 }
 
+/** One thing that marks a protocol down in the risk score, with its cost and why. */
+export interface RiskFactor {
+  label: string;
+  points: number;
+  detail: string;
+}
+
+/** A protocol's risk score: 100 to start, less for every flag, never below 0. */
+export interface RiskScore {
+  score: number;
+  factors: RiskFactor[];
+}
+
 /** One row of board.json: the ranked board's row. */
 export interface BoardRow {
   rank: number;
@@ -115,6 +128,7 @@ export interface BoardRow {
     age_days: number | null;
   };
   farm_steps: string[];
+  risk: RiskScore;
 }
 
 /** The dashboard's compact view of one row, with farm plans generated in the page. */
@@ -135,6 +149,9 @@ export interface RadarRow {
   growth_multiplier: number;
   maturity_multiplier: number;
   breadth_multiplier: number;
+  risk_score: number;
+  risk_label: string;
+  risk_factors: RiskFactor[];
 }
 
 /** A live-token protocol: it already trades, so the board shows the market's own value, not a model's. */
@@ -341,6 +358,7 @@ export function buildBoard(snapshot: Snapshot, model: ModelConstants = MODEL): B
         age_days: s.age,
       },
       farm_steps: farmSteps(s.p, s.age).map(stepText),
+      risk: riskScore(s.p, s.age),
     };
   });
   return rows;
@@ -405,6 +423,44 @@ function holdDaysFor(age: number | null): number {
   if (age < 180) return 60;
   if (age < 365) return 45;
   return 30;
+}
+
+/**
+ * A protocol's risk score, from its own record only. It starts at 100 and loses points for
+ * each flag: one chain only, a sharp seven-day fall, a short or missing history, a small TVL.
+ * The score is a warning, not a verdict: a low score never removes a row from the board, it
+ * only says to look closer before farming. A protocol with no flag at all scores 100, and
+ * the factors list always carries at least one entry, so the drawer always has something to show.
+ */
+export function riskScore(p: SnapshotProtocol, age: number | null): RiskScore {
+  const factors: RiskFactor[] = [];
+  if (p.chains.length <= 1) {
+    factors.push({ label: 'One chain only', points: 15, detail: 'All of its TVL sits on a single chain, so one outage or bridge failure strands the whole position.' });
+  }
+  const fall = finite(p.change_7d, 0);
+  if (fall <= -20) {
+    factors.push({ label: 'Sharp seven-day fall', points: 20, detail: 'TVL fell by a fifth or more in seven days: money is leaving faster than it arrives.' });
+  }
+  if (age === null) {
+    factors.push({ label: 'No listing date', points: 5, detail: 'No listing date is on record, so the age behind the maturity multiplier is a guess.' });
+  } else if (age < 90) {
+    factors.push({ label: 'Listed under 90 days ago', points: 10, detail: 'Less than three months of history to judge the protocol by.' });
+  }
+  if (p.tvl_usd < 100_000_000) {
+    factors.push({ label: 'Under $100M TVL', points: 10, detail: 'Thin liquidity: a small pool moves further on the same trade.' });
+  }
+  if (factors.length === 0) {
+    factors.push({ label: 'No flags', points: 0, detail: 'Nothing in its record marks it down: several chains, steady TVL, a history to check.' });
+  }
+  const score = Math.max(0, 100 - factors.reduce((sum, f) => sum + f.points, 0));
+  return { score, factors };
+}
+
+/** The risk score in one word: low, medium or high. */
+export function riskLabel(score: number): string {
+  if (score >= 85) return 'low';
+  if (score >= 65) return 'medium';
+  return 'high';
 }
 
 /** The category's one action, in the words a farmer can follow. */
@@ -507,6 +563,9 @@ export function radarRow(row: BoardRow, watchlist: Set<string>): RadarRow {
     growth_multiplier: row.model.growth_multiplier,
     maturity_multiplier: row.model.maturity_multiplier,
     breadth_multiplier: row.model.breadth_multiplier,
+    risk_score: row.risk.score,
+    risk_label: riskLabel(row.risk.score),
+    risk_factors: row.risk.factors,
   };
 }
 

@@ -140,6 +140,10 @@ tbody tr[data-selected="true"] { background: rgba(232, 163, 61, 0.10); }
 .steps { margin: 0; padding-left: var(--s5); display: grid; gap: var(--s3); }
 .steps li { padding-left: var(--s1); }
 .steps b { display: block; font-weight: 500; }
+.risk { margin: 0; padding-left: var(--s5); display: grid; gap: var(--s3); }
+.risk li { padding-left: var(--s1); }
+.risk li::marker { color: var(--amber); }
+.risk b { display: block; font-weight: 500; }
 .cost { color: var(--muted); font-size: 12px; font-family: var(--font-num); }
 .foot { color: var(--muted); font-size: 12px; padding: var(--s5) 0 var(--s2); }
 
