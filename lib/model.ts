@@ -289,7 +289,7 @@ function bySlug(protocols: SnapshotProtocol[]): Map<string, SnapshotProtocol> {
   return new Map(protocols.map((p) => [p.slug, p]));
 }
 
-/** The protocols the board ranks, strongest first, with ranks 1..n and strictly falling values. */
+/** The protocols the board ranks, strongest first, with ranks 1..n and non-rising values (ties allowed). */
 export function buildBoard(snapshot: Snapshot, model: ModelConstants = MODEL): BoardRow[] {
   const calibration = calibrate(snapshot, model);
   const index = bySlug(snapshot.protocols);
